@@ -6,17 +6,26 @@ terminology:
 
 alarm: watches a single metric over period of time; performs 1+ actions based
        on value of metric relative to threshold over number of time periods
+
+rule: Allows to match events and route them to 1+ target event
+    related cloudwatch functions:
+        1) put_rule
+        2) put_targets
+        3) put_events
+
+ARN: "Amazon resource name"
 """
 
 import boto3
+import json
 
 
 def print_alarms():
-    #create CloudWatch client if one does not exist
+    # create CloudWatch client if one does not exist
     cloudwatch = boto3.client('cloudwatch')
 
-    #List alarms of insufficent data through the pagination interface
-    #paginator docs: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/paginators.html
+    # List alarms of insufficent data through the pagination interface
+    # paginator docs: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/paginators.html
     paginator = cloudwatch.get_paginator('describe_alarms')
     for response in paginator.paginate(StateValue='INSUFFICIENT_DATA'):
         print(response['MetricAlarms'])
@@ -96,7 +105,7 @@ def disable_action(alarm_name='Web_Server_CPU_Utilization'):
     """
     cloudwatch = boto3.client('cloudwatch')
 
-    #disable alarm
+    # disable alarm
     cloudwatch.disable_alarm_actions(
         AlarmNames=[alarm_name]
     )
@@ -117,8 +126,8 @@ def list_metrics(args=None):
 
     cloudwatch = boto3.client('cloudwatch')
 
-    #list metrics through the paginator interface
-    #more on paginators at: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/paginators.html
+    # list metrics through the paginator interface
+    # more on paginators at: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/paginators.html
     paginator = cloudwatch.get_paginator('list_metrics')
 
     for response in paginator.paginate(**kargs):
@@ -126,11 +135,11 @@ def list_metrics(args=None):
 
 
 def publish_metric():
-    cloudwatch=boto3.client('cloudwatch')
+    cloudwatch = boto3.client('cloudwatch')
 
     args = {'Dimensions': [{'Name': 'UNIQUE_PAGES', 'Value': 'URLS'}],
-                 'MetricName': 'PAGES_VISITED',
-                 'Namespace': 'SITE/TRAFFIC'}
+            'MetricName': 'PAGES_VISITED',
+            'Namespace': 'SITE/TRAFFIC'}
 
     cloudwatch.put_metric_data(
         MetricData=[
@@ -152,30 +161,99 @@ def publish_metric():
     list_metrics(args)
 
 
+def create_rule(acc_id=None, args=None):
+    """
+    Create a scheduled rule; demonstrates put_rule method.
+    For more on enabling put_rule:
+    https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/events.html#CloudWatchEvents.Client.put_rule
+    For disabling events see:
+     https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/events.html#CloudWatchEvents.Client.disable_rule
+    """
+    cloudwatch_events = boto3.client('events')
+    kargs = None
+    if args:
+        kargs = args
+    else:
+        kargs = {
+            'Name':'DEMO_EVENT',
+            'RoleArn':f'arn:aws:iam::{acc_id}:role/aws-service-role/events.amazonaws.com/AWSServiceRoleForCloudWatchEvents',
+            'ScheduleExpression':'rate(5 minutes)',
+            'State':'ENABLED'
+        }
+
+    #put an event rule
+    response = cloudwatch_events.put_rule(**kargs)
+    print(response['RuleArn'])
+
+
+def add_lambda_alarm(acc_id, region='us-east-1', func_name='LogEC2InstanceStateChange'):
+    """
+    demonstrates put_targets method; for more see
+    https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/events.html#CloudWatchEvents.Client.put_targets
+    """
+    cloudwatch_events = boto3.client('events')
+
+    #put target for rule
+    response = cloudwatch_events.put_targets(
+        Rule='DEMO_EVENT',
+        Targets=[
+            {
+                'Arn': f'arn:aws:lambda:{region}:{acc_id}:function:{func_name}',
+                'Id': 'myCloudWatchEventsTarget',
+            }
+        ]
+    )
+    print(response)
+
+
+def send_events():
+    """
+    demonstrates put_events method; for more see
+    https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/events.html#CloudWatchEvents.Client.put_events
+    """
+
+    cloudwatch_events = boto3.client('events')
+
+    # Put an event
+    response = cloudwatch_events.put_events(
+        Entries=[
+            {
+                'Detail': json.dumps({'key1': 'value1', 'key2': 'value2'}),
+                'DetailType': 'appRequestSubmitted',
+                'Resources': [
+                    'RESOURCE_ARN',
+                ],
+                'Source': 'com.company.myapp'
+            }
+        ]
+    )
+    print(response['Entries'])
+
 
 if __name__ == '__main__':
-    # print('\n***\nstep 1 of tutorial')
-    # print('https://boto3.amazonaws.com/v1/documentation/api/latest/guide/cw-example-creating-alarms.html\n***\n')
-    # print('\n***\ncreate\n***\n')
-    # create_alarm()
-    # print('\n***\ndelete\n***\n')
-    # delete_alarm()
-    # input('\n***\nbreak\n***\n')
-    # print('\n***\ncreate foo\n***\n')
-    # create_alarm('foo')
-    # print('\n***\ncreate bar\n***\n')
-    # create_alarm('bar')
-    # print('\n***\ndelete bar\n***\n')
-    # delete_alarm('bar')
-    # print('\n***\ndelete foo\n***\n')
-    # delete_alarm('foo')
-    # print('\n***\nstep 2 of tutorial')
-    # print('https://boto3.amazonaws.com/v1/documentation/api/latest/guide/cw-example-using-alarms.html\n***\n')
-    # print('\n***\ncreate alarm with action\n***\n')
-    # create_alarm_with_actions()
-    # print('\n***\ndisable action on alarm\n***\n')
-    # disable_action()
-    # print('\n***\ndelete\n***\n')
+    acc_id = input('enter account id: ')
+    print('\n***\nstep 1 of tutorial')
+    print('https://boto3.amazonaws.com/v1/documentation/api/latest/guide/cw-example-creating-alarms.html\n***\n')
+    print('\n***\ncreate alarm\n***\n')
+    create_alarm()
+    print('\n***\ndelete alarm\n***\n')
+    delete_alarm()
+    input('\n***\nbreak\n***\n')
+    print('\n***\ncreate foo\n***\n')
+    create_alarm('foo')
+    print('\n***\ncreate bar\n***\n')
+    create_alarm('bar')
+    print('\n***\ndelete bar\n***\n')
+    delete_alarm('bar')
+    print('\n***\ndelete foo\n***\n')
+    delete_alarm('foo')
+    print('\n***\nstep 2 of tutorial')
+    print('https://boto3.amazonaws.com/v1/documentation/api/latest/guide/cw-example-using-alarms.html\n***\n')
+    print('\n***\ncreate alarm with action\n***\n')
+    create_alarm_with_actions()
+    print('\n***\ndisable action on alarm\n***\n')
+    disable_action()
+    print('\n***\ndelete alarm\n***\n')
     delete_alarm()
     print('\n***\nstep 3 of tutorial')
     print('https://boto3.amazonaws.com/v1/documentation/api/latest/guide/cw-example-metrics.html\n***\n')
@@ -183,3 +261,11 @@ if __name__ == '__main__':
     publish_metric()
     print('\n***\nstep 4 of tutorial')
     print('https://boto3.amazonaws.com/v1/documentation/api/latest/guide/cw-example-events.html\n***\n')
+    print('\n***\ncreate rule\n***\n')
+    create_rule(acc_id)
+    print('\n***\ncreate lambda alarm\n***\n')
+    add_lambda_alarm(acc_id)
+    print('\n***\nsend event\n***\n')
+    send_events()
+
+
