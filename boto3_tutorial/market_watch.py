@@ -14,6 +14,19 @@ rule: Allows to match events and route them to 1+ target event
         3) put_events
 
 ARN: "Amazon resource name"
+
+subscriptions: provide access to a real-time feed of log events from CloudWatch Logs and
+               deliver that feed to services (ex: AWS Lambda) for custom processing,
+               analysis, or loading to other systems
+
+subscription filter: defines the pattern to use for filtering which log events
+                     are delivered to your AWS resource
+                     -- destination of is an AWS Lambda function
+
+related subscription filter methods:
+        1) get_paginator
+        2) put_subscription_filter
+        3) delete_subscription_filter
 """
 
 import boto3
@@ -230,42 +243,103 @@ def send_events():
     print(response['Entries'])
 
 
+def list_existing_subscription_filters():
+    """
+    demonstrates the use of get_paginator; for more see:
+    https://boto3.amazonaws.com/v1/documentation/api/latest/guide/paginators.html
+    """
+    cloudwatch_logs=boto3.client('logs')
+
+    #Use paginator interface to list subcription filters
+    paginator=cloudwatch_logs.get_paginator('describe_subscription_filters')
+    for response in paginator.paginate(logGroupName='GROUP_NAME'):
+        print(response['subscriptionFilters'])
+
+
+def create_subscription_filter(acc_id, region='us-east-1', func_name='LogEC2InstanceStateChange'):
+    """
+    demonstrates the use of put_subscription_filter; for more see:
+    https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/logs.html#CloudWatchLogs.Client.put_subscription_filter
+    """
+    cloudwatch_logs=boto3.client('logs')
+
+    #create subscription filter
+    cloudwatch_logs.put_subscription_filter(
+        #destinationArn=f'arn:aws:lambda:{region}:{acc_id}:function:{func_name}',
+        destinationArn='LogEC2InstanceStateChange',
+        filterName='FILTER_NAME',
+        filterPattern='ERROR',
+        logGroupName=f'arn:aws:{region}:{acc_id}:log-group:/codebuild-sandbox-bf179249-670d-461b-86b4-e515c7da8354:*' #/aws/codebuild/sandbox
+        #need ligitimate group for this to work
+    )
+    # cloudwatch_logs.put_subscription_filter(
+    #     destinationArn='LAMBDA_FUNCTION_ARN',
+    #     filterName='FILTER_NAME',
+    #     filterPattern='ERROR',
+    #     logGroupName='LOG_GROUP', #need ligitimate group for this to work
+    # )
+
+
+def delete_subscription_filter():
+    """
+    demonstrates the use of delete_subscription_filter; for more see:
+    https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/logs.html#CloudWatchLogs.Client.delete_subscription_filter
+    """
+
+    cloudwatch_logs = boto3.client('logs')
+
+    #delete filter
+    cloudwatch_logs.delete_subscription(
+        filterName='FILTER_NAME',
+        logGroupName='LOG_GROUP'
+    )
+
+
+
 if __name__ == '__main__':
     acc_id = input('enter account id: ')
-    print('\n***\nstep 1 of tutorial')
-    print('https://boto3.amazonaws.com/v1/documentation/api/latest/guide/cw-example-creating-alarms.html\n***\n')
-    print('\n***\ncreate alarm\n***\n')
-    create_alarm()
-    print('\n***\ndelete alarm\n***\n')
-    delete_alarm()
-    input('\n***\nbreak\n***\n')
-    print('\n***\ncreate foo\n***\n')
-    create_alarm('foo')
-    print('\n***\ncreate bar\n***\n')
-    create_alarm('bar')
-    print('\n***\ndelete bar\n***\n')
-    delete_alarm('bar')
-    print('\n***\ndelete foo\n***\n')
-    delete_alarm('foo')
-    print('\n***\nstep 2 of tutorial')
-    print('https://boto3.amazonaws.com/v1/documentation/api/latest/guide/cw-example-using-alarms.html\n***\n')
-    print('\n***\ncreate alarm with action\n***\n')
-    create_alarm_with_actions()
-    print('\n***\ndisable action on alarm\n***\n')
-    disable_action()
-    print('\n***\ndelete alarm\n***\n')
-    delete_alarm()
-    print('\n***\nstep 3 of tutorial')
-    print('https://boto3.amazonaws.com/v1/documentation/api/latest/guide/cw-example-metrics.html\n***\n')
-    list_metrics()
-    publish_metric()
-    print('\n***\nstep 4 of tutorial')
-    print('https://boto3.amazonaws.com/v1/documentation/api/latest/guide/cw-example-events.html\n***\n')
-    print('\n***\ncreate rule\n***\n')
-    create_rule(acc_id)
-    print('\n***\ncreate lambda alarm\n***\n')
-    add_lambda_alarm(acc_id)
-    print('\n***\nsend event\n***\n')
-    send_events()
+    # print('\n***\nstep 1 of tutorial')
+    # print('https://boto3.amazonaws.com/v1/documentation/api/latest/guide/cw-example-creating-alarms.html\n***\n')
+    # print('\n***\ncreate alarm\n***\n')
+    # create_alarm()
+    # print('\n***\ndelete alarm\n***\n')
+    # delete_alarm()
+    # input('\n***\nbreak\n***\n')
+    # print('\n***\ncreate foo\n***\n')
+    # create_alarm('foo')
+    # print('\n***\ncreate bar\n***\n')
+    # create_alarm('bar')
+    # print('\n***\ndelete bar\n***\n')
+    # delete_alarm('bar')
+    # print('\n***\ndelete foo\n***\n')
+    # delete_alarm('foo')
+    # print('\n***\nstep 2 of tutorial')
+    # print('https://boto3.amazonaws.com/v1/documentation/api/latest/guide/cw-example-using-alarms.html\n***\n')
+    # print('\n***\ncreate alarm with action\n***\n')
+    # create_alarm_with_actions()
+    # print('\n***\ndisable action on alarm\n***\n')
+    # disable_action()
+    # print('\n***\ndelete alarm\n***\n')
+    # delete_alarm()
+    # print('\n***\nstep 3 of tutorial; metrics')
+    # print('https://boto3.amazonaws.com/v1/documentation/api/latest/guide/cw-example-metrics.html\n***\n')
+    # print('\n***\nlist metrics\n***\n')
+    # list_metrics()
+    # print('\n***\nadd metric\n***\n')
+    # publish_metric()
+    # print('\n***\nstep 4 of tutorial; rules and events')
+    # print('https://boto3.amazonaws.com/v1/documentation/api/latest/guide/cw-example-events.html\n***\n')
+    # print('\n***\ncreate rule\n***\n')
+    # create_rule(acc_id)
+    # print('\n***\ncreate lambda alarm\n***\n')
+    # add_lambda_alarm(acc_id)
+    # print('\n***\nsend event\n***\n')
+    # send_events()
+    print('\n***\nstep 5 of tutorial; subscription filters')
+    print('https://boto3.amazonaws.com/v1/documentation/api/latest/guide/cw-example-subscription-filters.html\n***\n')
+    print('\n***\ncreate subscription filters\n***\n')
+    create_subscription_filter(acc_id)
+    print('\n***\nlist existing subscription filters\n***\n')
+    #list_existing_subscription_filters()
 
 
