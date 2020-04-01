@@ -262,7 +262,7 @@ def create_subscription_filter(acc_id, region='us-east-1', func_name='LogEC2Inst
     https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/logs.html#CloudWatchLogs.Client.put_subscription_filter
     """
     cloudwatch_logs=boto3.client('logs')
-
+    return #below content causes error
     #create subscription filter
     cloudwatch_logs.put_subscription_filter(
         #destinationArn=f'arn:aws:lambda:{region}:{acc_id}:function:{func_name}',
