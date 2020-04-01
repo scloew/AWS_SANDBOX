@@ -219,50 +219,15 @@ def batch_writing(table_name):
                     }
                 )
 
-        return  # the following code produces error about 'partition_key'
-        with table.batch_writer(overwrite_by_pkeys=['partition_key', 'sort_key']) as batch_3:
-            batch.put_item(
-                Item={
-                    'partition_key': 'p1',
-                    'sort_key': 's1',
-                    'other': '111',
-                }
-            )
-            batch.put_item(
-                Item={
-                    'partition_key': 'p1',
-                    'sort_key': 's1',
-                    'other': '222',
-                }
-            )
-            batch.delete_item(
-                Key={
-                    'partition_key': 'p1',
-                    'sort_key': 's2'
-                }
-            )
-            batch.put_item(
-                Item={
-                    'partition_key': 'p1',
-                    'sort_key': 's2',
-                    'other': '444',
-                }
-            )
-
-            batch_3.put_item(
-                Item={
-                    'partition_key': 'p1',
-                    'sort_key': 's1',
-                    'other': '222',
-                }
-            )
-            batch_3.put_item(
-                Item={
-                    'partition_key': 'p1',
-                    'sort_key': 's2',
-                    'other': '444',
-                }
-            )
+        new_entries = [('harry', 'potter'), ('harmonie', 'granger'), ('RONALD', 'WEASLEY!!!')]
+        with table.batch_writer(overwrite_by_pkeys=['username', 'last_name']) as batch_3:
+            for f_name, l_name in new_entries:
+                batch_3.put_item(
+                    Item={
+                        'username': f_name,
+                        'last_name': l_name,
+                    }
+                )
 
 
 def query_on_username(table_name, user_name, key='username'):
@@ -339,28 +304,35 @@ def delete_table(table_name):
 
 if __name__ == '__main__':
     table_name = input('enter table name to create, update, query, scan, and delete: ')
-    print('\n***\nCreate Table\n***\n')
-    create_table_demo(table_name)
-    print('\n***\nUse Existing Table\n***\n')
-    use_existing_table(table_name)
-    print('\n***\nCreate Table\n***\n')
-    create_item(table_name)
-    print('\n***\nGet Item\n***\n')
-    get_item(table_name, 'Homer_Jay', 'Simpson')
-    print('\n***\nUpdate Item\n***\n')
-    update_item(table_name, 'Homer_Jay', 'Simpson')
-    print('\n***\nDelete Item\n***\n')
     try:
-        delete_item_demo(table_name, 'Homer_Jay', 'Simpson')
+        print('\n***\nCreate Table\n***\n')
+        create_table_demo(table_name)
+        print('\n***\nUse Existing Table\n***\n')
+        use_existing_table(table_name)
+        print('\n***\nCreate Table\n***\n')
+        create_item(table_name)
+        print('\n***\nGet Item\n***\n')
+        get_item(table_name, 'Homer_Jay', 'Simpson')
+        print('\n***\nUpdate Item\n***\n')
+        update_item(table_name, 'Homer_Jay', 'Simpson')
+        print('\n***\nDelete Item\n***\n')
+        try:
+            delete_item_demo(table_name, 'Homer_Jay', 'Simpson')
+        except Exception as e:
+            print('failed to retrieve deleted item (i.e. delete_item works)')
+        print('\n***\nWrite Items with batch\n***\n')
+        batch_writing(table_name)
+        print('\n***\nQuery Table\n***\n')
+        query_on_username(table_name, 'johndoe')
+        print('\n***\nScan Table\n***\n')
+        scan_on_attr(table_name, 25)
+        more_scans(table_name, 'J', 'CA')
+        more_scans(table_name, 'J', 90001, account_type='standard_user', attr_2='address.zipcode')
     except Exception as e:
-        print('failed to retrieve deleted item (i.e. delete_item works')
-    print('\n***\nWrite Items with batch\n***\n')
-    batch_writing(table_name)
-    print('\n***\nQuery Table\n***\n')
-    query_on_username(table_name, 'johndoe')
-    print('\n***\nScan Table\n***\n')
-    scan_on_attr(table_name, 25)
-    more_scans(table_name, 'J', 'CA')
-    more_scans(table_name, 'J', 90001, account_type='standard_user', attr_2='address.zipcode')
-    print('\n***\nDelete the users table\n***\n')
-    delete_table(table_name)
+        print('an unexpected error occured')
+        print(e)
+        print(e.__traceback__)
+        input('break ')
+    finally:
+        print(f'\n***\nDelete table {table_name}\n***\n')
+        delete_table(table_name)
